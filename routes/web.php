@@ -29,7 +29,7 @@ Route::delete('/eliminar-factura/{codigo_factura}', [paginappal::class, 'elimina
 Route::get('/factura/{codigo_factura}', [paginappal::class, 'obtenerFactura']);
 Route::put('/factura/{codigo_factura}', [paginappal::class, 'actualizarFactura']);
 Route::put('/factura/{codigo_factura}', [paginappal::class, 'obtenerFacturaEditar']);
-Route::get('/factura/{id}/ver', [paginappal::class, 'verFactura'])->name('factura.ver');
+Route::get('/factura/{codigo_factura}', [paginappal::class, 'obtenerFacturaVer'])->name('factura.detalle');
 Route::post('/validarCedula', [paginappal::class, 'validarCedula'])->name('validarCedula');
 Route::get('/productos', function () {
     return response()->json(Items::all());
@@ -37,5 +37,6 @@ Route::get('/productos', function () {
 Route::get('/productos', [paginappal::class, 'obtenerProductos']);
 Route::get('/numeroFactura', [paginappal::class, 'generarNumeroFactura']);
 Route::post('/calcularTotal', [paginappal::class, 'calcularTotal']);
+Route::post('/guardarFactura', [paginappal::class, 'guardarFactura'])->name('guardar.factura');
 
 

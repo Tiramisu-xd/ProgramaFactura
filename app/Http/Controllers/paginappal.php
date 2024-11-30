@@ -12,20 +12,15 @@ class paginappal extends Controller
 {
     public function validarCedula(Request $request)
     {
-        // Validar que la cédula esté presente
         $request->validate([
             'cedula' => 'required|numeric',
         ]);
 
-        // Buscar la cédula en la tabla de clientes
         $cliente = Clientes::where('cc', $request->cedula)->first();
 
-        // Si el cliente no existe, retornar un mensaje de error
         if (!$cliente) {
             return response()->json(['error' => 'La cédula no está registrada en nuestros registros.'], 404);
         }
-
-        // Si el cliente existe, devolver un mensaje de éxito
         return response()->json(['success' => 'Cédula registrada correctamente.'], 200);
     }
 
@@ -126,47 +121,73 @@ class paginappal extends Controller
         ]);
     }
 
-    public function verFactura($codigo_factura)
+    public function obtenerFacturaVer($codigo_factura)
     {
-        $factura = Encabezado_facturas::where('codigo_factura', $codigo_factura)->first();
+        try {
+            $factura = Encabezado_facturas::where('codigo_factura', $codigo_factura)->first();
     
-        if (!$factura) {
-            return response()->json(['error' => 'Factura no encontrada'], 404);
+            if (!$factura) {
+                return response()->json(['success' => false, 'message' => 'Factura no encontrada.']);
+            }
+    
+            $detalles = Detalle_facturas::where('codigo_factura', $codigo_factura)
+                ->join('productos', 'productos.id', '=', 'detalle_facturas.producto')
+                ->select(
+                    'productos.descripcion_producto',
+                    'detalle_facturas.cantidad',
+                    'productos.precio_unitario',
+                    DB::raw('detalle_facturas.cantidad * productos.precio_unitario as total')
+                )
+                ->get();
+    
+            $cliente = Clientes::where('cc', $factura->cc)->first();
+    
+            return response()->json([
+                'success' => true,
+                'factura' => $factura,
+                'cliente' => $cliente ? $cliente->nombre : 'Sin nombre',
+                'detalles' => $detalles
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error al obtener la factura.', 'error' => $e->getMessage()]);
         }
-    
-        return response()->json([
-            'codigo_factura' => $factura->codigo_factura,
-            'nombre_cliente' => $factura->cliente->nombre, 
-            'cc' => $factura->cc,
-            'fecha_factura' => $factura->fecha_factura,
-            'precio_total' => $factura->precio_total,
-            'productos' => $factura->productos->map(function ($producto) {
-                return [
-                    'nombre' => $producto->descripcion_producto,
-                    'descripcion' => $producto->descripcion,
-                    'cantidad' => $producto->pivot->cantidad,
-                    'precio_unitario' => $producto->precio_unitario,
-                ];
-            }),
-        ]);
     }
 
-    public function calcularTotal(Request $request)
+    public function guardarFactura(Request $request)
     {
-        $item_id = $request->input('numero_detalle');
-        $numero_detalle = $request->input('detalle_factura_id');
-        
-        $item = Items::find($item_id);
+        try {
+            $request->validate([
+                'cedula' => 'required|exists:clientes,cc',
+                'producto' => 'required|array',
+                'producto.*' => 'exists:items,codigo_producto',
+                'cantidad' => 'required|array',
+                'cantidad.*' => 'integer|min:1',
+            ]);
 
-        $detalleFactura = Detalle_facturas::find($numero_detalle);
+            $encabezado = new Encabezado_facturas();
+            $encabezado->codigo_factura=$request->numero_factura;
+            $encabezado->cc = $request->cedula;
+            $encabezado->fecha_factura = now();
+            $encabezado->precio_total = $request->total;
+            $encabezado->save();
 
-        if (!$item || !$detalleFactura) {
-            return response()->json(['error' => 'Item o detalle de factura no encontrado.'], 404);
+            foreach ($request->producto as $index => $productoId) {
+                $cantidad = $request->cantidad[$index];
+                $producto = \DB::table('items')->where('codigo_producto', $productoId)->first();
+
+                $detalle = new Detalle_facturas();
+                $detalle->codigo_factura = $encabezado->codigo_factura;
+                $detalle->codigo_producto = $producto->codigo_producto;
+                $detalle->unidad_producto = $cantidad;
+                $detalle->precio_unitario = $producto->precio_producto;
+                $detalle->save();
+
+            }
+
+            return redirect('/')->with('completed', 'Movimiento creado!');
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error al guardar la factura: ' . $e->getMessage()]);
         }
-
-        $total = $item->precio_producto * $detalleFactura->unidad_producto;
-
-        return response()->json(['total' => $total]);
     }
 
 }

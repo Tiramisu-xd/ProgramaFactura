@@ -18,39 +18,20 @@
 
 <!-- Modal VER FACTURA-->
 <div class="modal fade" id="modalVerFactura" tabindex="-1" aria-labelledby="modalVerFacturaLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalVerFacturaLabel">Detalles de la Factura</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <!-- Información General de la Factura -->
                 <p><strong>Número de Factura:</strong> <span id="ver_codigo_factura"></span></p>
-                <p><strong>Nombre del Cliente:</strong> <span id="ver_nombre_cliente"></span></p>
-                <p><strong>Cédula del Cliente:</strong> <span id="ver_cedula"></span></p>
                 <p><strong>Fecha de la Factura:</strong> <span id="ver_fecha_factura"></span></p>
-                <p><strong>Total de la Factura:</strong> <span id="ver_precio_total"></span></p>
-                <hr
-                <!-- Tabla de Productos -->
-                <h6>Detalles de los Productos</h6>
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Nombre del Producto</th>
-                                <th>Descripción</th>
-                                <th>Cantidad</th>
-                                <th>Precio Unitario</th>
-                                <th>Subtotal</th>
-                            </tr>
-                        </thead>
-                        <tbody id="ver_productos">
-                            <!-- Se llenará dinámicamente -->
-                        </tbody>
-                    </table>
-                </div>
+                <p><strong>Cédula del Cliente:</strong> <span id="ver_cedula"></span></p>
+                <p><strong>Nombre del Cliente:</strong> <span id="ver_cliente_nombre"></span></p>
+                <hr>
+                <h6>Productos</h6>
+                <div id="ver_productos"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -104,23 +85,24 @@
                 <h5 class="modal-title" id="modalNuevaFacturaLabel">Crear Nueva Factura</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
+            <form action="{{ route('guardar.factura') }}" method="POST">
+                @csrf
             <div class="modal-body">
                 <!-- Formulario para crear factura -->
-                <form id="formNuevaFactura">
-                    @csrf
+                
                     <div class="mb-3">
                         <label for="cedula" class="form-label">Cédula del Cliente</label>
-                        <input type="text" class="form-control" id="cedula" name="cedula" required>
+                        <input type="text" class="form-control" id="cedula" name="cedula" onchange="validarCC()">
                     </div>
                     <!-- Contenedor de productos -->
                     <div id="productosContainer">
                         <div class="producto mb-3">
                             <label for="producto" class="form-label">Producto</label>
-                            <select class="form-select" name="producto[]" required>
-                                <option value="numero_detalle" id="numero_detalle">Seleccione un producto</option>
+                            <select class="form-select select-producto" name="producto[]" onchange="calcularTotal()" required>
+                                <option value="numero_detalle" id="numero_detalle" >Seleccione un producto</option>
                             </select>
                             <label for="cantidad" class="form-label">Cantidad</label>
-                            <input type="number" class="form-control" name="cantidad[]" id="unidad_producto" value="unidad_producto" required>
+                            <input type="number" class="form-control input-cantidad" name="cantidad[]" id="unidad_producto" value="unidad_producto" onchange="calcularTotal()">
                             <button type="button" class="btn btn-danger btn-sm mt-2 remove-producto" style="display: none;">Eliminar</button>
                         </div>
                     </div>
@@ -128,27 +110,26 @@
                     <br>
                     <div class="mb-3">
                         <label for="numero_factura" class="form-label">Número de Factura</label>
-                        <input type="text" class="form-control" id="numero_factura" name="numero_factura" disabled>
+                        <input type="text" class="form-control" id="numero_factura" name="numero_factura" readonly>
                     </div>
-                    <!-- Campo Total que se calculará automáticamente -->
                     <div class="mb-3">
                         <label for="total" class="form-label">Total</label>
-                        <input type="text" class="form-control" id="total" name="total" disabled>
-                        <button type="button" id="calcular-btn" class="btn btn-primary">Calcular Total</button>
+                        <input type="text" class="form-control" id="total" name="total" readonly>
                     </div>
-                </form>
+                
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" id="guardarFactura">Guardar</button>
+                <button type="submit" class="btn btn-primary" id="guardarFactura">Guardar</button>
             </div>
+            </form>
         </div>
     </div>
 </div>
 
 <!-- Formulario de búsqueda -->
 <div class="input-group mb-3">
-    <input type="text" class="form-control" placeholder="Buscar factura o cliente..." id="search">
+    <input type="text" class="form-control" placeholder="Buscar factura..." id="search">
     <button class="btn btn-outline-secondary" type="button" id="btn-buscar">Buscar</button>
 </div>
 
@@ -201,8 +182,8 @@
                     <td>${item.cc || 'N/A'}</td>
                     <td>$${item.precio_total || '0.00'}</td>
                     <td>
-                        <button class="btn btn-sm btn-info">Ver</button>
-                        <button class="btn btn-sm btn-warning btn-editar" data-id="${item.codigo_factura}">Editar</button>
+                        <button class="btn btn-sm btn-info btn-ver-factura" data-codigo-factura="${item.codigo_factura}">Ver</button>
+                        <!--<button class="btn btn-sm btn-warning btn-editar" data-id="${item.codigo_factura}">Editar</button>-->
                         <button class="btn btn-sm btn-danger btn-eliminar" data-id="${item.codigo_factura}">Eliminar</button>
                     </td>
                 `;
@@ -243,59 +224,48 @@
     // CARGAR FACTURAS
     window.onload = cargarFacturas;
     // VER DETALLE
-    document.addEventListener('DOMContentLoaded', function () {     
-        document.querySelectorAll('.btn-ver').forEach(button => {
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.btn-ver-factura').forEach(button => {
             button.addEventListener('click', function () {
-                const facturaId = this.getAttribute('data-id');
-            
-                fetch(`/factura/${facturaId}/ver`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
+                const codigoFactura = this.getAttribute('data-codigo-factura');
+
+                fetch(`/factura/${codigoFactura}`)
                     .then(response => response.json())
                     .then(data => {
-                        if (data.error) {
-                            alert(data.error);
-                            return;
+                        if (data.success) {
+                            document.getElementById('ver_codigo_factura').textContent = data.factura.codigo_factura;
+                            document.getElementById('ver_fecha_factura').textContent = data.factura.created_at;
+                            document.getElementById('ver_cedula').textContent = data.factura.cc;
+                            document.getElementById('ver_cliente_nombre').textContent = data.cliente;
+
+                            const productosContainer = document.getElementById('ver_productos');
+                            productosContainer.innerHTML = '';
+
+                            data.detalles.forEach(detalle => {
+                                const productoRow = `
+                                    <p>
+                                        <strong>Producto:</strong> ${detalle.descripcion_producto} <br>
+                                        <strong>Precio Unitario:</strong> $${detalle.precio_unitario.toFixed(2)} <br>
+                                        <strong>Cantidad:</strong> ${detalle.cantidad} <br>
+                                        <strong>Total:</strong> $${detalle.total.toFixed(2)}
+                                    </p>
+                                    <hr>`;
+                                productosContainer.innerHTML += productoRow;
+                            });
+
+                            const modalVerFactura = new bootstrap.Modal(document.getElementById('modalVerFactura'));
+                            modalVerFactura.show();
+                        } else {
+                            alert(data.message || 'Error al obtener los detalles de la factura.');
                         }
-                    
-                        document.getElementById('ver_codigo_factura').innerText = data.codigo_factura;
-                        document.getElementById('ver_nombre_cliente').innerText = data.nombre_cliente || 'N/A';
-                        document.getElementById('ver_cedula').innerText = data.cc;
-                        document.getElementById('ver_fecha_factura').innerText = data.fecha_factura;
-                        document.getElementById('ver_precio_total').innerText = `$${data.precio_total}`;
-                    
-                        const productosContainer = document.getElementById('ver_productos');
-                        productosContainer.innerHTML = '';
-                    
-                        data.productos.forEach((producto, index) => {
-                            const subtotal = producto.cantidad * producto.precio_unitario;
-                        
-                            const row = document.createElement('tr');
-                            row.innerHTML = `
-                                <td>${index + 1}</td>
-                                <td>${producto.nombre}</td>
-                                <td>${producto.descripcion || 'Sin descripción'}</td>
-                                <td>${producto.cantidad}</td>
-                                <td>$${producto.precio_unitario.toFixed(2)}</td>
-                                <td>$${subtotal.toFixed(2)}</td>
-                            `;
-                            productosContainer.appendChild(row);
-                        });
-                    
-                        const modalVerFactura = new bootstrap.Modal(document.getElementById('modalVerFactura'));
-                        modalVerFactura.show();
                     })
                     .catch(error => {
-                        console.error('Error al obtener los detalles de la factura:', error);
-                        alert('Ocurrió un error al cargar los detalles de la factura.');
+                        console.error(error);
+                        alert('Ocurrió un error al obtener los datos de la factura.');
                     });
             });
-            });
         });
-
+    });
     // EDITAR FACTURA
     document.addEventListener('click', function (e) {
         if (e.target && e.target.classList.contains('btn-editar')) {
@@ -381,66 +351,6 @@
         }
         });
 
-    //CREAR NUEVA FACTURA
-    document.getElementById('guardarFactura').addEventListener('click', function () {
-        var cedula = document.getElementById('cedula').value;
-
-        fetch("{{ route('validarCedula') }}", {
-            method: "POST", 
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: JSON.stringify({
-                cedula: cedula
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert(data.error);
-                $('#modalNuevaFactura').modal('hide');
-            } else {
-                alert(data.success);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-        });
-
-    // Obtener el número de factura automáticamente al abrir el modal nueva Factura
-    document.addEventListener('DOMContentLoaded', function() {
-    
-        document.getElementById('modalNuevaFactura').addEventListener('show.bs.modal', function () {
-            fetch('/numeroFactura')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('numero_factura').value = data.numero_factura;
-                })
-                .catch(error => console.error('Error al obtener número de factura:', error));
-        });
-        });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-   
     //SELECT DESCRIPCION PRODUCTO
     document.addEventListener('DOMContentLoaded', function() {
         fetch('/productos')
@@ -450,8 +360,9 @@
                 selectProducto.forEach(select => {
                     data.forEach(producto => {
                         const option = document.createElement('option');
-                        option.value = producto.id;
+                        option.value = producto.codigo_producto;
                         option.textContent = producto.descripcion_producto;
+                        option.setAttribute("data-price", producto.precio_producto);
                         select.appendChild(option);
                     });
                 });
@@ -466,12 +377,12 @@
 
             newProducto.innerHTML = `
                 <label for="producto" class="form-label">Producto</label>
-                <select class="form-select" name="producto[]" required>
+                <select class="form-select select-producto" name="producto[]" onchange="calcularTotal()" required>
                     <option value="numero_detalle" id="numero_detalle">Seleccione un producto</option>
                 </select>
 
                 <label for="cantidad" class="form-label">Cantidad</label>
-                <input type="number" class="form-control" name="cantidad[]" required>
+                <input type="number" class="form-control input-cantidad" name="cantidad[]" onchange="calcularTotal()" required>
 
                 <button type="button" class="btn btn-danger btn-sm mt-2 remove-producto">Eliminar</button>
             `;
@@ -484,8 +395,9 @@
                     const newSelect = newProducto.querySelector('select[name="producto[]"]');
                     data.forEach(producto => {
                         const option = document.createElement('option');
-                        option.value = producto.id;
+                        option.value = producto.codigo_producto;
                         option.textContent = producto.descripcion_producto;
+                        option.setAttribute("data-price", producto.precio_producto);
                         newSelect.appendChild(option);
                     });
                 })
@@ -498,44 +410,59 @@
             });
         });
     });
-
     //CAULCULAR TOTAL
-    document.getElementById('calcular-btn').addEventListener('click', function () {
-        const itemId = document.getElementById('numero_factura').value; // ID del producto seleccionado
-        const unidadProducto = document.getElementById('unidad_producto').value; // Cantidad seleccionada
+    function calcularTotal(){
+        let total = 0;
+        $('.select-producto').each(function (index, element) {
+            const selectedOption = $(element).find('option:selected');
+            const price = selectedOption.data('price');
+                let input_cantidad = $('.input-cantidad')[index]
+                $(input_cantidad).val()
 
-        if (!itemId || !unidadProducto || unidadProducto <= 0) {
-            alert('Por favor, seleccione un producto y una cantidad válida.');
-            return;
-        }
+                let cantidad = $(input_cantidad).val()
 
-        fetch('/calcularTotal', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}' 
-            },
-            body: JSON.stringify({
-                item_id: numero_factura,
-                detalle_factura_id: 1, 
+                total = total + (price * cantidad)
+        });
+        $('#total').val(total)
+    }
+    //VALIDAR CC
+    function validarCC(){
+        var cedula = document.getElementById('cedula').value;
+            fetch("{{ route('validarCedula') }}", {
+                method: "POST", 
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    cedula: cedula
+                })
             })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.total !== undefined) {
-                document.getElementById('total').value = data.total;
-            } else {
-                alert('Error al calcular el total.');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Ocurrió un error al calcular el total.');
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    $('#modalNuevaFactura').modal('hide');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }
+    //OBTENER NUMERO DINAMICO DE LA FACTURA
+    document.addEventListener('DOMContentLoaded', function() {
+    
+        document.getElementById('modalNuevaFactura').addEventListener('show.bs.modal', function () {
+            fetch('/numeroFactura')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('numero_factura').value = data.numero_factura;
+                })
+                .catch(error => console.error('Error al obtener número de factura:', error));
         });
     });
-
-
-
+    //GUARDAR FACTURA
+    
 
 
 </script>
@@ -545,6 +472,9 @@
 
 <!-- Bootstrap JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+<!--- JQUERY -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 
 </body>
 </html>

@@ -12,8 +12,8 @@ class Clientes extends Model
     protected $table = 'clientes';
     protected $fillable = ['cc', 'nombre', 'fecha_nacimiento'];
 
-    public function facturas()
+    public function factura()
     {
-        return $this->hasMany(Encabezado_facturas::class, 'cc', 'cc'); // Relación 1-N con EncabezadoFactura
+        return $this->belongsTo(Encabezado_facturas::class, 'cc', 'cc');
     }
 }
